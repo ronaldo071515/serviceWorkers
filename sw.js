@@ -1,8 +1,9 @@
-const nombreCache = 'apv-v1';
+const nombreCache = 'apv-v3';
 
 const archivos = [
     "/",
     "index.html",
+    "error.html",
     "./css/bootstrap.css",
     "./css/styles.css",
     "./js/app.js",
@@ -28,10 +29,46 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
     console.log('Service Worker Acticado');
 
-    //console.log(e);
+    e.waitUntil(
+        caches.keys()
+            .then( keys => {
+
+                return Promise.all(
+                    keys.filter( key => key !== nombreCache)
+                        .map( key => caches.delete(key) )//Borra versiones anteriores
+                )
+            })
+    )
+
 });
 
 //Evento fetch para descargar archivos estaticos
-self.addEventListener('fetch', e => {
+/* self.addEventListener('fetch', e => {
     //console.log('Fetch....', e);
-});
+
+    e.respondWith(
+        caches.match(e.request)
+            .then(respuestaCache => {
+                return respuestaCache || fetch(e.request);
+            })
+            .catch( () => caches.match('/error.html'))
+    )
+
+}); */
+
+self.addEventListener('fetch', function(event) {
+    event.respondWith(
+      // Try the cache
+      caches.match(event.request).then(function(response) {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).then(function(response) {
+          if (response.status === 404) {
+            return caches.match('error.html');
+          }
+          return response
+        });
+      })
+    );
+  });
